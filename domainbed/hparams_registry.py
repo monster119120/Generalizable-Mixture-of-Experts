@@ -168,7 +168,7 @@ def _hparams(algorithm, dataset, random_seed):
     elif algorithm in ['DANN', 'CDANN']:
         _hparam('weight_decay_g', 0., lambda r: 10 ** r.uniform(-6, -2))
 
-    if 'GMOE' in algorithm:
+    if 'GMOE' in algorithm or 'VIT' in algorithm:
         if dataset == 'VLCS':
             _hparam('lr', 3e-5, lambda r: 10 ** r.uniform(-4.5, -2.5))
             _hparam('resnet_dropout', 0.5, lambda r: r.choice([0., 0.1, 0.5]))

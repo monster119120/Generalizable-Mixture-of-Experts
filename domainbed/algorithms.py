@@ -15,8 +15,8 @@ from domainbed.lib.misc import (
 from copy import deepcopy
 import copy
 
-sys.path.append('/mnt/lustre/bli/projects/EIL/domainbed')
-import vision_transformer, vision_transformer_hybrid
+sys.path.append('/nvme/liyuanchun/kongr/Generalizable-Mixture-of-Experts/domainbed')
+import vision_transformer
 from collections import defaultdict, OrderedDict
 
 try:
@@ -26,7 +26,7 @@ except:
     backpack = None
 
 from domainbed import networks
-from domainbed import resnet_variants
+# from domainbed import resnet_variants
 import torchvision.models as models
 
 ALGORITHMS = [
@@ -56,7 +56,8 @@ ALGORITHMS = [
     'IB_IRM',
     'CAD',
     'CondCAD',
-    'GMOE'
+    'GMOE',
+    'VIT',
 ]
 
 
@@ -183,6 +184,39 @@ class ERM(Algorithm):
 
     def predict(self, x):
         return self.network(x)
+
+
+class VIT(Algorithm):
+    """
+    SFMOE
+    """
+
+    def __init__(self, input_shape, num_classes, num_domains, hparams):
+        super(VIT, self).__init__(input_shape, num_classes, num_domains, hparams)
+        # self.model = vision_transformer.deit_small_patch16_224(pretrained=True, num_classes=num_classes, moe_layers=['F'] * 8 + ['S', 'F'] * 2, mlp_ratio=4., num_experts=6, is_tutel=True, drop_path_rate=0.1, router='cosine_top').cuda()
+        self.model = vision_transformer.deit_small_patch16_224(pretrained=True, num_classes=num_classes, moe_layers=None, mlp_ratio=4., num_experts=6, is_tutel=True, drop_path_rate=0.1, router='cosine_top').cuda()
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.hparams["lr"], weight_decay=self.hparams['weight_decay'])
+
+    def update(self, minibatches, unlabeled=None):
+        all_x = torch.cat([x for x, y in minibatches])
+        all_y = torch.cat([y for x, y in minibatches])
+        loss = F.cross_entropy(self.predict(all_x), all_y)
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+        return {'loss': loss.item(), 'loss_aux': 0}
+
+    def predict(self, x, forward_feature=False):
+        if forward_feature:
+            return self.model.forward_features(x)
+        else:
+            prediction = self.model(x)
+            if type(prediction) is tuple:
+                return (prediction[0] + prediction[1]) / 2
+            else:
+                return prediction
+
 
 
 class GMOE(Algorithm):

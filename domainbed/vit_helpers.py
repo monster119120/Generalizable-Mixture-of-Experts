@@ -14,7 +14,7 @@ import torch.nn as nn
 from torch.hub import load_state_dict_from_url
 
 from timm.models.features import FeatureListNet, FeatureDictNet, FeatureHookNet
-from timm.models.fx_features import FeatureGraphNet
+# from timm.models.fx_features import FeatureGraphNet
 from timm.models.hub import has_hf_hub, download_cached_file, load_state_dict_from_hf
 from timm.models.layers import Conv2dSame, Linear
 from timm.models.vision_transformer import VisionTransformer, resize_pos_embed

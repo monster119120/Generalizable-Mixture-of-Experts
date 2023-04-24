@@ -268,7 +268,7 @@ if __name__ == "__main__":
     # download_office_home(args.data_dir)
     # download_domain_net(args.data_dir)
     # download_vlcs(args.data_dir)
-    download_terra_incognita(args.data_dir)
+    # download_terra_incognita(args.data_dir)
     # download_sviro(args.data_dir)
     # Camelyon17Dataset(root_dir=args.data_dir, download=True)
     # FMoWDataset(root_dir=args.data_dir, download=True)

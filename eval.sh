@@ -1,0 +1,8 @@
+CUDA_VISIBLE_DEVICES=4 python3 -m domainbed.scripts.eval --data_dir=./domainbed/data/ --algorithm VIT --dataset OfficeHome --test_env 0 --output_dir log/OfficeHome/VIT/domain0
+CUDA_VISIBLE_DEVICES=5 python3 -m domainbed.scripts.eval --data_dir=./domainbed/data/ --algorithm VIT --dataset OfficeHome --test_env 1 --output_dir log/OfficeHome/VIT/domain1
+CUDA_VISIBLE_DEVICES=6 python3 -m domainbed.scripts.eval --data_dir=./domainbed/data/ --algorithm VIT --dataset OfficeHome --test_env 2 --output_dir log/OfficeHome/VIT/domain2
+CUDA_VISIBLE_DEVICES=7 python3 -m domainbed.scripts.eval --data_dir=./domainbed/data/ --algorithm VIT --dataset OfficeHome --test_env 3 --output_dir log/OfficeHome/VIT/domain3
+CUDA_VISIBLE_DEVICES=4 python3 -m domainbed.scripts.eval --data_dir=./domainbed/data/ --algorithm GMOE --dataset OfficeHome --test_env 0 --output_dir log/OfficeHome/GMOE/domain0
+CUDA_VISIBLE_DEVICES=5 python3 -m domainbed.scripts.eval --data_dir=./domainbed/data/ --algorithm GMOE --dataset OfficeHome --test_env 1 --output_dir log/OfficeHome/GMOE/domain1
+CUDA_VISIBLE_DEVICES=6 python3 -m domainbed.scripts.eval --data_dir=./domainbed/data/ --algorithm GMOE --dataset OfficeHome --test_env 2 --output_dir log/OfficeHome/GMOE/domain2
+CUDA_VISIBLE_DEVICES=7 python3 -m domainbed.scripts.eval --data_dir=./domainbed/data/ --algorithm GMOE --dataset OfficeHome --test_env 3 --output_dir log/OfficeHome/GMOE/domain3

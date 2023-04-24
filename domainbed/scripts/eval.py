@@ -60,11 +60,11 @@ if __name__ == "__main__":
     # If we ever want to implement checkpointing, just persist these values
     # every once in a while, and then load them from disk here.
     start_step = 0
-    algorithm_dict = None
+    algorithm_dict = args.output_dir
 
     os.makedirs(args.output_dir, exist_ok=True)
-    sys.stdout = misc.Tee(os.path.join(args.output_dir, 'out.txt'))
-    sys.stderr = misc.Tee(os.path.join(args.output_dir, 'err.txt'))
+    sys.stdout = misc.Tee(os.path.join(args.output_dir, 'eval_out.txt'))
+    sys.stderr = misc.Tee(os.path.join(args.output_dir, 'eval_err.txt'))
     # if "Debug" not in args.dataset:
     #     wandb.init(project="sparse-moe",
     #                entity='drluodian',
@@ -195,93 +195,13 @@ if __name__ == "__main__":
                                 len(dataset) - len(args.test_envs), hparams)
 
     if algorithm_dict is not None:
-        algorithm.load_state_dict(algorithm_dict)
+        ckpt = torch.load(os.path.join(algorithm_dict, 'model.pkl'))
+        algorithm.load_state_dict(ckpt['model_dict'])
 
     algorithm.to(device)
 
-    train_minibatches_iterator = zip(*train_loaders)
-    uda_minibatches_iterator = zip(*uda_loaders)
-    checkpoint_vals = collections.defaultdict(lambda: [])
-
-    steps_per_epoch = min([len(env) / hparams['batch_size'] for env, _ in in_splits])
-
-    n_steps = args.steps or dataset.N_STEPS
-    checkpoint_freq = args.checkpoint_freq or dataset.CHECKPOINT_FREQ
-
-
-    def save_checkpoint(filename):
-        if args.skip_model_save:
-            return
-        save_dict = {
-            "args": vars(args),
-            "model_input_shape": dataset.input_shape,
-            "model_num_classes": dataset.num_classes,
-            "model_num_domains": len(dataset) - len(args.test_envs),
-            "model_hparams": hparams,
-            "model_dict": algorithm.state_dict()
-        }
-        torch.save(save_dict, os.path.join(args.output_dir, filename))
-
-
-    last_results_keys = None
-    for step in range(start_step, n_steps):
-        step_start_time = time.time()
-        minibatches_device = [(x.to(device), y.to(device)) for x, y in next(train_minibatches_iterator)]
-        if args.task == "domain_adaptation":
-            uda_device = [x.to(device) for x, _ in next(uda_minibatches_iterator)]
-        else:
-            uda_device = None
-        step_vals = algorithm.update(minibatches_device)
-        checkpoint_vals['step_time'].append(time.time() - step_start_time)
-
-        for key, val in step_vals.items():
-            checkpoint_vals[key].append(val)
-
-        if (step % checkpoint_freq == 0) or (step == n_steps - 1):
-            results = {
-                'step': step,
-                'epoch': step / steps_per_epoch,
-            }
-
-            for key, val in checkpoint_vals.items():
-                results[key] = np.mean(val)
-
-            evals = zip(eval_loader_names, eval_loaders, eval_weights)
-            for name, loader, weights in evals:
-                acc = misc.accuracy(algorithm, loader, weights, device)
-                results[name + '_acc'] = acc
-
-            results['algorithm'] = args.algorithm
-            results['dataset'] = args.dataset
-            results['test_envs'] = args.test_envs
-            results['mem_gb'] = torch.cuda.max_memory_allocated() / (1024. * 1024. * 1024.)
-
-            results_keys = sorted(results.keys())
-            if results_keys != last_results_keys:
-                misc.print_row(results_keys, colwidth=12)
-                last_results_keys = results_keys
-            misc.print_row([results[key] for key in results_keys],
-                           colwidth=12)
-
-            # if wandb.run:
-            #     wandb.log(results)
-            results.update({
-                'hparams': hparams,
-                'args': vars(args)
-            })
-
-            epochs_path = os.path.join(args.output_dir, 'results.jsonl')
-            with open(epochs_path, 'a') as f:
-                f.write(json.dumps(results, sort_keys=True) + "\n")
-
-            algorithm_dict = algorithm.state_dict()
-            start_step = step + 1
-            checkpoint_vals = collections.defaultdict(lambda: [])
-
-            if args.save_model_every_checkpoint:
-                save_checkpoint(f'model_step{step}.pkl')
-
-    save_checkpoint('model.pkl')
-
-    with open(os.path.join(args.output_dir, 'done'), 'w') as f:
-        f.write('done')
+    print('eval start')
+    evals = zip(eval_loader_names, eval_loaders, eval_weights)
+    for name, loader, weights in evals:
+        acc = misc.accuracy(algorithm, loader, weights, device)
+        print(f'{name}\t\t{acc}')
