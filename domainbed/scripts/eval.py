@@ -136,73 +136,73 @@ if __name__ == "__main__":
     # domain generalization and domain adaptation results, then domain
     # generalization algorithms should create the same 'uda-splits', which will
     # be discared at training.
-    # in_splits = []
-    # out_splits = []
-    # uda_splits = []
-    # for env_i, env in enumerate(dataset):
-    #     uda = []
+    in_splits = []
+    out_splits = []
+    uda_splits = []
+    for env_i, env in enumerate(dataset):
+        uda = []
 
-    #     out, in_ = misc.split_dataset(env, int(len(env) * args.holdout_fraction), misc.seed_hash(args.trial_seed, env_i))
-    #     if env_i in args.test_envs:
-    #         uda, in_ = misc.split_dataset(in_, int(len(in_) * args.uda_holdout_fraction), misc.seed_hash(args.trial_seed, env_i))
+        out, in_ = misc.split_dataset(env, int(len(env) * args.holdout_fraction), misc.seed_hash(args.trial_seed, env_i))
+        if env_i in args.test_envs:
+            uda, in_ = misc.split_dataset(in_, int(len(in_) * args.uda_holdout_fraction), misc.seed_hash(args.trial_seed, env_i))
 
-    #     if hparams['class_balanced']:
-    #         in_weights = misc.make_weights_for_balanced_classes(in_)
-    #         out_weights = misc.make_weights_for_balanced_classes(out)
-    #         if uda is not None:
-    #             uda_weights = misc.make_weights_for_balanced_classes(uda)
-    #     else:
-    #         in_weights, out_weights, uda_weights = None, None, None
-    #     in_splits.append((in_, in_weights))
-    #     out_splits.append((out, out_weights))
-    #     if len(uda):
-    #         uda_splits.append((uda, uda_weights))
+        if hparams['class_balanced']:
+            in_weights = misc.make_weights_for_balanced_classes(in_)
+            out_weights = misc.make_weights_for_balanced_classes(out)
+            if uda is not None:
+                uda_weights = misc.make_weights_for_balanced_classes(uda)
+        else:
+            in_weights, out_weights, uda_weights = None, None, None
+        in_splits.append((in_, in_weights))
+        out_splits.append((out, out_weights))
+        if len(uda):
+            uda_splits.append((uda, uda_weights))
 
-    # if args.task == "domain_adaptation" and len(uda_splits) == 0:
-    #     raise ValueError("Not enough unlabeled samples for domain adaptation.")
+    if args.task == "domain_adaptation" and len(uda_splits) == 0:
+        raise ValueError("Not enough unlabeled samples for domain adaptation.")
 
-    # train_loaders = [InfiniteDataLoader(
-    #     dataset=env,
-    #     weights=env_weights,
-    #     batch_size=hparams['batch_size'],
-    #     num_workers=dataset.N_WORKERS)
-    #     for i, (env, env_weights) in enumerate(in_splits)
-    #     if i not in args.test_envs]
-
-    # uda_loaders = [InfiniteDataLoader(
-    #     dataset=env,
-    #     weights=env_weights,
-    #     batch_size=hparams['batch_size'],
-    #     num_workers=dataset.N_WORKERS)
-    #     for i, (env, env_weights) in enumerate(uda_splits)
-    #     if i in args.test_envs]
-
-    # eval_loaders = [FastDataLoader(
-    #     dataset=env,
-    #     batch_size=hparams['batch_size'],
-    #     num_workers=dataset.N_WORKERS)
-    #     for env, _ in (in_splits + out_splits + uda_splits)]
-
-    # eval_loaders = [torch.utils.data.DataLoader(
-    #     dataset=env,
-    #     batch_size=hparams['batch_size'],
-    #     num_workers=dataset.N_WORKERS)
-    #     for env, _ in (in_splits + out_splits + uda_splits)]
-
-
-    # eval_weights = [None for _, weights in (in_splits + out_splits + uda_splits)]
-    # eval_loader_names = ['env{}_in'.format(i)
-    #                      for i in range(len(in_splits))]
-    # eval_loader_names += ['env{}_out'.format(i)
-    #                       for i in range(len(out_splits))]
-    # eval_loader_names += ['env{}_uda'.format(i)
-    #                       for i in range(len(uda_splits))]
-
-    eval_loaders = [torch.utils.data.DataLoader(
-        dataset=dataset.datasets[i],
+    train_loaders = [InfiniteDataLoader(
+        dataset=env,
+        weights=env_weights,
         batch_size=hparams['batch_size'],
         num_workers=dataset.N_WORKERS)
-        for i in range(len(dataset.datasets))]
+        for i, (env, env_weights) in enumerate(in_splits)
+        if i not in args.test_envs]
+
+    uda_loaders = [InfiniteDataLoader(
+        dataset=env,
+        weights=env_weights,
+        batch_size=hparams['batch_size'],
+        num_workers=dataset.N_WORKERS)
+        for i, (env, env_weights) in enumerate(uda_splits)
+        if i in args.test_envs]
+
+    eval_loaders = [FastDataLoader(
+        dataset=env,
+        batch_size=hparams['batch_size'],
+        num_workers=dataset.N_WORKERS)
+        for env, _ in (in_splits + out_splits + uda_splits)]
+
+    eval_loaders = [torch.utils.data.DataLoader(
+        dataset=env,
+        batch_size=hparams['batch_size'],
+        num_workers=dataset.N_WORKERS)
+        for env, _ in (in_splits + out_splits + uda_splits)]
+
+
+    eval_weights = [None for _, weights in (in_splits + out_splits + uda_splits)]
+    eval_loader_names = ['env{}_in'.format(i)
+                         for i in range(len(in_splits))]
+    eval_loader_names += ['env{}_out'.format(i)
+                          for i in range(len(out_splits))]
+    eval_loader_names += ['env{}_uda'.format(i)
+                          for i in range(len(uda_splits))]
+
+    # eval_loaders = [torch.utils.data.DataLoader(
+    #     dataset=dataset.datasets[i],
+    #     batch_size=hparams['batch_size'],
+    #     num_workers=dataset.N_WORKERS)
+    #     for i in range(len(dataset.datasets))]
 
     algorithm_class = algorithms.get_algorithm_class(args.algorithm)
     algorithm = algorithm_class(dataset.input_shape, dataset.num_classes,
@@ -214,18 +214,24 @@ if __name__ == "__main__":
 
     algorithm.to(device)
 
+
     print('eval start')
     accs = []
-    for loader in eval_loaders:
-        acc = misc.accuracy(algorithm, loader, None, device)
-        accs.append(acc)
-        print(f'{acc}')
 
 
-    # evals = zip(eval_loader_names, eval_loaders, eval_weights)
-    # for name, loader, weights in evals:
-    #     acc = misc.accuracy(algorithm, loader, weights, device)
+    # for loader in eval_loaders:
+    #     acc = misc.accuracy(algorithm, loader, None, device)
     #     accs.append(acc)
-    
+    #     print(f'{acc}')
+
+    start_time = time.time()
+    evals = zip(eval_loader_names, eval_loaders, eval_weights)
+    for name, loader, weights in evals:
+        acc = misc.accuracy(algorithm, loader, weights, device)
+        accs.append(acc)
+        print(f'{name[:6]}\t{acc}')
+    end_time = time.time()
+    print('total time is', end_time-start_time)
+
     # for i, name in enumerate(eval_loader_names):
     #     print(f'{name[:6]}\t{accs[i]}')
